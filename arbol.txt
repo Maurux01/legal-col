@@ -1,0 +1,51 @@
+legal-col/
++-- plan.txt
++-- arbol.txt
++-- README.md
++-- build.gradle.kts
++-- settings.gradle.kts
++-- gradlew
++-- gradlew.bat
++-- gradle/
+|   +-- wrapper/
+|       +-- gradle-wrapper.jar
+|       +-- gradle-wrapper.properties
++-- src/
+|   +-- main/
+|   |   +-- java/
+|   |   |   +-- co/
+|   |   |       +-- legalcol/
+|   |   |           +-- Main.java
+|   |   |           +-- model/
+|   |   |           |   +-- Articulo.java
+|   |   |           |   +-- Titulo.java
+|   |   |           +-- repository/
+|   |   |           |   +-- ConstitucionRepository.java
+|   |   |           +-- service/
+|   |   |           |   +-- BuscadorService.java
+|   |   |           |   +-- FavoritoService.java
+|   |   |           |   +-- NotaService.java
+|   |   |           +-- ui/
+|   |   |               +-- ConsolaApp.java
+|   |   +-- kotlin/
+|   |   |   +-- co/
+|   |   |       +-- legalcol/
+|   |   |           +-- AppKt.kt
+|   |   |           +-- EjemploKotlin.kt
+|   |   +-- resources/
+|   |       +-- constitucion.json
+|   |       +-- constitucion.txt
+|   +-- test/
+|       +-- java/
+|       |   +-- co/
+|       |       +-- legalcol/
+|       |           +-- BuscadorServiceTest.java
+|       |           +-- FavoritoServiceTest.java
+|       +-- kotlin/
+|       |   +-- co/
+|       |       +-- legalcol/
+|       |           +-- InteropTest.kt
+|       +-- resources/
+|           +-- constitucion-test.json
++-- .gitignore
++-- LICENSE (opcional)

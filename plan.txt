@@ -1,0 +1,157 @@
+PLAN - App Constitucion Politica de Colombia 1991 en Java (compatible Kotlin) sin Android Studio
+================================================================================================
+
+1. OBJETIVO
+--------
+Crear una app JVM 100% offline, escrita en Java 17 pero compilable, usable y ampliable
+desde Kotlin, SIN Android Studio.
+IDE permitido: IntelliJ IDEA Community o VS Code + JDK 17 + Gradle 8 con Kotlin DSL.
+
+Funciones acordadas:
+- Leer y buscar: ver Titulos, Capitulos y Articulos (1-380 + transitorios), buscador
+  por numero y por palabra clave.
+- Favoritos y notas: guardar articulos favoritos y anotaciones personales.
+- Offline total: cero red en tiempo de ejecucion.
+- Datos: fuente oficial empaquetada como TXT/JSON local (las 2 opciones elegidas:
+  1) incluir TXT/JSON local + 2) scraping oficial una sola vez para generarlo).
+
+Repo actual: legal-col/ solo tiene README.md. Aqui se inicia todo.
+
+2. STACK DECIDIDO
+----------------
+- Lenguaje: Java 17 + Kotlin JVM 1.9.x (interoperabilidad total).
+- Build: Gradle 8.x con Kotlin DSL (build.gradle.kts + settings.gradle.kts).
+  Soporta codigo mixto src/main/java + src/main/kotlin.
+- Librerias minimas (solo para leer JSON local, sin red en runtime):
+  Gson o Jackson + JUnit5 para tests.
+- UI Fase 1: consola (funciona en cualquier IDE, sin Android Studio).
+- UI Fase 2 opcional: Swing o JavaFX con la misma logica.
+- Datos: src/main/resources/constitucion.json + constitucion.txt de respaldo.
+- Persistencia usuario: user.home/.legalcol/favoritos.json y notas.json
+  (fuera del jar para no borrarse al actualizar).
+- JDK: Temurin 17 o Oracle 17. Gradle wrapper incluido.
+
+3. ESTRUCTURA DE CARPETAS A CREAR
+---------------------------------
+legal-col/
+  plan.txt
+  README.md
+  build.gradle.kts
+  settings.gradle.kts
+  gradlew / gradlew.bat (wrapper)
+  src/main/java/co/legalcol/
+    Main.java
+    model/Articulo.java
+    model/Titulo.java
+    repository/ConstitucionRepository.java
+    service/BuscadorService.java
+    service/FavoritoService.java
+    service/NotaService.java
+    ui/ConsolaApp.java
+  src/main/kotlin/co/legalcol/
+    AppKt.kt          (puente: fun main() llama a clases Java, demuestra interop)
+    EjemploKotlin.kt
+  src/main/resources/
+    constitucion.json
+    constitucion.txt
+  src/test/java/co/legalcol/
+    BuscadorServiceTest.java
+  src/test/kotlin/co/legalcol/
+    InteropTest.kt
+
+4. MODELO DE DATOS
+------------------
+Articulo { int numero; String titulo; String capitulo; String texto; }
+Titulo { String nombre; String capitulo; List<Integer> articulos; }
+
+Ejemplo constitucion.json:
+[
+  {"numero": 11, "titulo": "De los derechos fundamentales", "capitulo": "1", "texto": "..."},
+  {"numero": 86, "titulo": "De la proteccion y aplicacion de los derechos", "capitulo": "4", "texto": "Accion de tutela..."}
+]
+
+5. COMO CONSEGUIR EL TEXTO LEGAL (OPCION 1 + 2)
+-----------------------------------------------
+1. Descarga unica (en tu PC con internet, una sola vez):
+   - https://www.secretariasenado.gov.co/constitucion-politica
+   - https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=4125
+2. Limpieza con script (Python o tarea Gradle):
+   - Quitar menus, pies de pagina, normalizar saltos de linea.
+   - Detectar patron "Articulo N." con regex y partir.
+   - Normalizar a 380 articulos + transitorios.
+3. Guardar resultado en src/main/resources/constitucion.json y .txt.
+4. Desde ahi la app NUNCA toca red = offline garantizado.
+5. Citar fuente en README por respeto legal:
+   "Texto base: Constitucion Politica de Colombia 1991, fuentes oficiales citadas."
+
+6. INTEROP JAVA -> KOTLIN (CLAVE DEL REQUISITO "que funcione en kotlin")
+-----------------------------------------------------------------------
+- Toda clase `public` Java es usable directo en Kotlin sin cambios.
+- Reglas para que funcione perfecto:
+  a) Usar JavaBeans (getNumero(), getTexto()) -> en Kotlin se ve como `art.numero`.
+  b) Anotar nulabilidad con @NotNull / @Nullable.
+  c) Evitar `static` salvaje, preferir metodos de instancia e inyeccion simple.
+  d) Evitar sobrecargas ambiguas con tipos primitivos.
+- Gradle: aplicar `id("org.jetbrains.kotlin.jvm")` + `kotlin { jvmToolchain(17) }`.
+- Compilacion mixta automatica por Gradle, sin configuracion extra.
+- Ejemplo Kotlin usando Java:
+  val repo = ConstitucionRepository()
+  val art = repo.buscarPorNumero(11)
+  println(art.texto)
+
+7. PASOS DE CONSTRUCCION
+-----------------------
+Paso 0: Requisitos. Instalar JDK 17, verificar `java -version`.
+Paso 1: `gradle init` tipo java-application, DSL Kotlin, package co.legalcol.
+Paso 2: Agregar plugin Kotlin JVM en build.gradle.kts:
+  plugins { java; application; id("org.jetbrains.kotlin.jvm") version "1.9.22" }
+Paso 3: Crear model/Articulo.java (POJO simple, constructor, getters).
+Paso 4: Crear repository/ConstitucionRepository.java:
+  - Carga con getResourceAsStream("/constitucion.json").
+  - Metodos: listarTodos(), buscarPorNumero(int), buscarPorPalabra(String).
+Paso 5: Crear service/BuscadorService.java:
+  - Normalizar tildes/minusculas para buscar ("tutela", "derecho", "tutela").
+  - Busqueda por contains + indice por numero.
+Paso 6: Crear service/FavoritoService.java y NotaService.java:
+  - Favoritos: Set<Integer> persistido en ~/.legalcol/favoritos.json.
+  - Notas: Map<Integer,String> en ~/.legalcol/notas.json.
+Paso 7: Crear ui/ConsolaApp.java con menu:
+  1.Listar titulos 2.Buscar 3.Ver articulo 4.Marcar favorito 5.Agregar nota 6.Ver favoritos 7.Salir
+Paso 8: Crear puente Kotlin AppKt.kt con fun main() que reutiliza ConsolaApp o Repository.
+Paso 9: Compilar y correr:
+  ./gradlew run
+  ./gradlew build
+  java -jar build/libs/legal-col-1.0.jar
+Paso 10: Tests: buscar "tutela" devuelve Art.86, favoritos persisten tras reinicio.
+
+8. COMO EJECUTAR SIN ANDROID STUDIO
+-----------------------------------
+- VS Code: instalar Extension Pack for Java + Kotlin + Gradle for Java.
+  Abrir carpeta -> Gradle Tasks -> run.
+- IntelliJ IDEA Community: Open Folder -> Trust Gradle -> Run Main.java o AppKt.kt.
+- Solo terminal: ./gradlew run (no necesitas IDE).
+
+9. EJEMPLO MINIMO DE CODIGO
+---------------------------
+Main.java:
+  public class Main { public static void main(String[] args) { new ConsolaApp().iniciar(); } }
+
+Articulo.java:
+  public class Articulo { private final int numero; private final String texto; ... getters ... }
+
+AppKt.kt:
+  fun main() { val repo = ConstitucionRepository(); println(repo.buscarPorNumero(11).texto) }
+
+10. ROADMAP
+----------
+v0.1: consola + leer + buscar + JSON local.
+v0.2: favoritos + notas + persistencia local.
+v1.0: jar ejecutable + documentacion + quiz de estudio opcional.
+v1.1 opcional: UI Swing/JavaFX reutilizando mismos repository/service.
+
+11. CRITERIOS DE EXITO
+---------------------
+- ./gradlew run funciona en PC sin internet ni Android Studio.
+- Buscar "86" o "tutela" muestra el articulo correcto.
+- Marcar favorito, cerrar, reabrir y sigue guardado.
+- Mismo codigo Java se puede llamar desde un archivo .kt sin reescribir.
